@@ -2,35 +2,24 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { Client, GatewayIntentBits, Collection, Partials } = require('discord.js');
+const { loadCommands } = require('./utils/commandLoader');
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildModeration,
+    GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages,
   ],
-  partials: [Partials.Channel],
+  partials: [Partials.Channel, Partials.Message, Partials.Reaction, Partials.User, Partials.GuildMember],
 });
 
 client.commands = new Collection();
-
-function loadCommands(dir) {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      loadCommands(fullPath);
-    } else if (entry.name.endsWith('.js')) {
-      const command = require(fullPath);
-      if (command?.data?.name) {
-        client.commands.set(command.data.name, command);
-      }
-    }
-  }
-}
-
-loadCommands(path.join(__dirname, 'commands'));
+loadCommands(client, path.join(__dirname, 'commands'));
 
 const eventsDir = path.join(__dirname, 'events');
 for (const file of fs.readdirSync(eventsDir).filter((f) => f.endsWith('.js'))) {
