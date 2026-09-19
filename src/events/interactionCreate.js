@@ -13,6 +13,9 @@ const { getDraft, resetDraft, buildEmbed } = require('../utils/embedStore');
 const { builderRows } = require('../commands/embed');
 const { logAction } = require('../utils/logger');
 const { getConfig } = require('../utils/guildConfig');
+const { categoryEmbed, selectRow, mainEmbed } = require('../commands/help');
+const { addParticipant, getGiveaway } = require('../utils/giveawayStore');
+const { giveawayEmbed } = require('../commands/giveaway');
 
 module.exports = {
   name: 'interactionCreate',
@@ -27,6 +30,11 @@ module.exports = {
 
       if (interaction.isButton()) {
         await handleButton(interaction);
+        return;
+      }
+
+      if (interaction.isStringSelectMenu()) {
+        await handleSelectMenu(interaction);
         return;
       }
 
@@ -55,6 +63,46 @@ async function handleButton(interaction) {
   if (id.startsWith('ticket_create:')) return createTicket(interaction, id);
   if (id === 'ticket_close') return closeTicket(interaction);
   if (id === 'ticket_delete') return deleteTicket(interaction);
+  if (id.startsWith('giveaway_enter:')) return enterGiveaway(interaction, id);
+}
+
+// ---------- Help select menu ----------
+
+async function handleSelectMenu(interaction) {
+  if (interaction.customId !== 'help_select') return;
+  const key = interaction.values[0];
+  await interaction.update({ embeds: [categoryEmbed(interaction.client, key)], components: interaction.message.components.map((row, i) => (i === 0 ? selectRow(key) : row)) });
+}
+
+// ---------- Giveaway ----------
+
+async function enterGiveaway(interaction, id) {
+  const messageId = id.split(':')[1];
+  const giveaway = getGiveaway(messageId);
+  if (!giveaway || giveaway.ended) {
+    return interaction.reply({ content: 'This giveaway has already ended.', ephemeral: true });
+  }
+
+  if (giveaway.requiredRoleId && !interaction.member.roles.cache.has(giveaway.requiredRoleId)) {
+    return interaction.reply({ content: `You need the <@&${giveaway.requiredRoleId}> role to enter this giveaway.`, ephemeral: true });
+  }
+
+  const already = giveaway.participants.includes(interaction.user.id);
+  addParticipant(messageId, interaction.user.id);
+
+  if (already) {
+    return interaction.reply({ content: "You're already entered!", ephemeral: true });
+  }
+
+  await interaction.reply({ content: `🎉 You're entered for **${giveaway.prize}**! Good luck.`, ephemeral: true });
+
+  try {
+    const updated = getGiveaway(messageId);
+    const host = await interaction.client.users.fetch(updated.hostId).catch(() => null);
+    await interaction.message.edit({ embeds: [giveawayEmbed(updated, host, false)] });
+  } catch {
+    // non-fatal — entry count display will just lag until next entry
+  }
 }
 
 async function handleEmbedButton(interaction, id) {
@@ -161,6 +209,7 @@ async function handleEmbedButton(interaction, id) {
         resetDraft(interaction.user.id);
         await logAction(interaction.guild, {
           title: 'Embed Edited',
+          type: 'general',
           fields: [
             { name: 'Channel', value: `<#${draft.editTarget.channelId}>` },
             { name: 'Edited by', value: `${interaction.user.tag}` },
@@ -176,6 +225,7 @@ async function handleEmbedButton(interaction, id) {
     resetDraft(interaction.user.id);
     await logAction(interaction.guild, {
       title: 'Embed Sent',
+      type: 'general',
       fields: [
         { name: 'Channel', value: `${interaction.channel}` },
         { name: 'Sent by', value: `${interaction.user.tag}` },
@@ -279,6 +329,7 @@ async function createTicket(interaction, customId) {
 
   await logAction(guild, {
     title: 'Ticket Opened',
+    type: 'tickets',
     color: '#57F287',
     fields: [
       { name: 'Type', value: labelSlug, inline: true },
@@ -297,6 +348,7 @@ async function closeTicket(interaction) {
     await interaction.reply('Closing this ticket in 5 seconds...');
     await logAction(interaction.guild, {
       title: 'Ticket Closed (deleted)',
+      type: 'tickets',
       color: '#ED4245',
       fields: [
         { name: 'Channel', value: `#${interaction.channel.name}` },
@@ -332,6 +384,7 @@ async function closeTicket(interaction) {
 
   await logAction(interaction.guild, {
     title: 'Ticket Closed (archived)',
+    type: 'tickets',
     color: '#ED4245',
     fields: [
       { name: 'Channel', value: `#${interaction.channel.name}` },
@@ -347,6 +400,7 @@ async function deleteTicket(interaction) {
   await interaction.reply('Deleting...');
   await logAction(interaction.guild, {
     title: 'Ticket Deleted',
+    type: 'tickets',
     color: '#ED4245',
     fields: [
       { name: 'Channel', value: `#${interaction.channel.name}` },
