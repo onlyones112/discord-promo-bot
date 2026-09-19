@@ -1,24 +1,25 @@
 const { EmbedBuilder } = require('discord.js');
 const { getConfig } = require('./guildConfig');
 
+const TYPES = ['general', 'mod', 'joinleave', 'roles', 'voice', 'tickets', 'antinuke'];
+
 /**
- * Sends a log embed to the guild's configured log channel, if one is set.
- * Safe to call even if no log channel is configured (no-op) or the channel
- * was deleted (fails silently).
+ * Sends a log embed to the guild's configured log channel for this type.
+ * Falls back to the "general" log channel if a specific type isn't set,
+ * and is a safe no-op if nothing is configured at all.
  */
-async function logAction(guild, { title, color = '#5865F2', fields = [], description }) {
-  const { logChannelId } = getConfig(guild.id);
-  if (!logChannelId) return;
+async function logAction(guild, { type = 'general', title, color = '#5865F2', fields = [], description }) {
+  const { logs } = getConfig(guild.id);
+  if (!logs) return;
+
+  const channelId = logs[type] || logs.general;
+  if (!channelId) return;
 
   try {
-    const channel = await guild.channels.fetch(logChannelId);
+    const channel = await guild.channels.fetch(channelId);
     if (!channel) return;
 
-    const embed = new EmbedBuilder()
-      .setColor(color)
-      .setTitle(title)
-      .setTimestamp();
-
+    const embed = new EmbedBuilder().setColor(color).setTitle(title).setTimestamp();
     if (description) embed.setDescription(description);
     if (fields.length) embed.addFields(fields);
 
@@ -28,4 +29,4 @@ async function logAction(guild, { title, color = '#5865F2', fields = [], descrip
   }
 }
 
-module.exports = { logAction };
+module.exports = { logAction, TYPES };
