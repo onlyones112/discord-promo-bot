@@ -2,10 +2,10 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { logAction } = require('../../utils/logger');
 
 module.exports = {
+  moderationCommand: true,
   data: new SlashCommandBuilder()
     .setName('unban')
     .setDescription('Unban a user by ID')
-    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
     .addStringOption((opt) => opt.setName('user_id').setDescription('The user ID to unban').setRequired(true)),
 
   async execute(interaction) {
@@ -14,6 +14,7 @@ module.exports = {
       await interaction.guild.members.unban(userId);
       await interaction.reply(`Unbanned <@${userId}> (${userId}).`);
       await logAction(interaction.guild, {
+      type: 'mod',
         title: 'Member Unbanned',
         color: '#57F287',
         fields: [

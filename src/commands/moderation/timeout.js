@@ -2,10 +2,10 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 const { logAction } = require('../../utils/logger');
 
 module.exports = {
+  moderationCommand: true,
   data: new SlashCommandBuilder()
     .setName('timeout')
     .setDescription('Timeout (mute) a member for a set duration')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
     .addUserOption((opt) => opt.setName('user').setDescription('User to timeout').setRequired(true))
     .addIntegerOption((opt) => opt.setName('minutes').setDescription('Duration in minutes (max 40320 = 28 days)').setMinValue(1).setMaxValue(40320).setRequired(true))
     .addStringOption((opt) => opt.setName('reason').setDescription('Reason').setRequired(false)),
@@ -33,6 +33,7 @@ module.exports = {
 
     await interaction.reply({ embeds: [embed] });
     await logAction(interaction.guild, {
+      type: 'mod',
       title: 'Member Timed Out',
       color: '#FEE75C',
       fields: [

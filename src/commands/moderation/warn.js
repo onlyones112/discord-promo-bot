@@ -3,10 +3,10 @@ const { addWarning, getWarnings, clearWarnings } = require('../../utils/warnStor
 const { logAction } = require('../../utils/logger');
 
 module.exports = {
+  moderationCommand: true,
   data: new SlashCommandBuilder()
     .setName('warn')
     .setDescription('Warn management')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
     .addSubcommand((sub) =>
       sub
         .setName('add')
@@ -45,6 +45,7 @@ module.exports = {
       await interaction.reply({ embeds: [embed] });
       await user.send(`You were warned in **${interaction.guild.name}**: ${reason}`).catch(() => {});
       await logAction(interaction.guild, {
+      type: 'mod',
         title: 'Member Warned',
         color: '#FEE75C',
         fields: [

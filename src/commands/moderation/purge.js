@@ -2,10 +2,10 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { logAction } = require('../../utils/logger');
 
 module.exports = {
+  moderationCommand: true,
   data: new SlashCommandBuilder()
     .setName('purge')
     .setDescription('Bulk delete messages in this channel')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .addIntegerOption((opt) => opt.setName('amount').setDescription('Number of messages to delete (1-100)').setMinValue(1).setMaxValue(100).setRequired(true))
     .addUserOption((opt) => opt.setName('user').setDescription('Only delete messages from this user').setRequired(false)),
 
@@ -30,6 +30,7 @@ module.exports = {
 
     await interaction.editReply(`Deleted ${deleted.size} message(s).`);
     await logAction(interaction.guild, {
+      type: 'mod',
       title: 'Messages Purged',
       color: '#ED4245',
       fields: [
