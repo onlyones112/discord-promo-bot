@@ -15,6 +15,12 @@ High-utility Discord bot with:
 - **Social** — `/social rep`, `/social profile`, `/social bio` — a light reputation/profile system
 - **AutoMod** — `/automod toggle` filters Discord invites, links, mention spam, or images automatically (staff bypass)
 - **Antinuke** — `/antinuke enable` auto-bans anyone (not whitelisted/owner) who deletes 3+ channels or roles in 10 seconds
+- **RoleLock** — `/rolelock add role:@X` protects a role; anyone not on the trusted list who adds/removes it gets auto-reverted
+- **ModPerms** — `/modperms grant role:@Role command:kick` gives a role access to a specific moderation command without native Discord permissions; includes a ban/kick rate limit
+- **Multi-panel Tickets** — up to 3 `/ticket-panel`s per server, managed with `/ticket-panels list|remove`
+- **Autorole Dashboard** — separate role lists for humans vs bots (`/autorole humans-add`, `/autorole bots-add`), plus `/autorole-panel`
+- **No-prefix mode & bot nickname** — `/guildnoprefix enable` lets `help`/`ping` work with zero prefix; `/guildbotprofile nickname` sets my nickname per-server
+- **Interactive panels** — `/antinuke-panel` (full config: trusted owners, punishment type, log channel, quarantine role — all via buttons/select-menus), `/automod-panel`, `/moderation-panel`, `/ticket-config-panel`, `/rolelock-panel`, `/modperms-panel`, `/autorole-panel`
 - **Fun/Roleplay** — `/fun action:hug|slap|kiss|pat|cuddle|poke|highfive|bonk|wink|sorry|cry|happy|blush|dance user:<optional>`
 - **Automation** — `/autorole` (auto-give a role on join), `/reactionrole` (react to a message → get a role), `/autoreact` (bot auto-reacts to every message in a channel)
 - **Multi-channel logging** — separate channels for mod actions, join/leave, role changes, voice activity, tickets, and antinuke — all set up in one command
@@ -104,6 +110,10 @@ Discord's ToS frowns on unsolicited mass-DMing users who haven't opted in — th
 - **AutoMod**: `/automod toggle filter:<invites|links|mentions|images> state:on` turns a filter on. Anyone with Manage Messages is never filtered (so staff can always post freely). Violating messages are deleted with a short warning that auto-removes itself.
 
 - **Antinuke**: `/antinuke enable` turns it on. If a non-whitelisted, non-owner member deletes 3+ channels or 3+ roles within 10 seconds, they're automatically banned and it's logged. Add trusted co-admins with `/antinuke whitelist-add user:@Name` so they're never caught by it.
+
+- **RoleLock**: `/rolelock add role:@Staff` protects that role. From then on, if anyone who isn't the server owner or on the trusted list (`/rolelock trusted-add user:@Name`) adds or removes that role from someone, the bot reverts it automatically and logs it. Good for protecting high-permission roles from a compromised or malicious mod account.
+
+- **Interactive panels**: instead of remembering subcommand names, `/antinuke-panel`, `/automod-panel`, `/moderation-panel`, and `/rolelock-panel` post an embed with buttons — Enable/Disable, toggle each AutoMod filter, or quick Lock/Unlock/Purge for the current channel. Anyone using the buttons still needs the same permission the equivalent slash command requires.
 
 - **Fun/Roleplay**: `/fun action:hug user:@Friend` posts a reaction gif + message. Targeted actions (hug, slap, kiss, pat, cuddle, poke, highfive, bonk, wink, sorry) need a `user`; solo actions (cry, happy, blush, dance) don't. Images come from the free waifu.pics API.
 
