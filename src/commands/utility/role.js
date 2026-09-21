@@ -2,10 +2,10 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { logAction } = require('../../utils/logger');
 
 module.exports = {
+  moderationCommand: true,
   data: new SlashCommandBuilder()
     .setName('role')
     .setDescription('Add or remove a role from a member')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
     .addSubcommand((sub) =>
       sub
         .setName('add')
@@ -42,6 +42,7 @@ module.exports = {
     }
 
     await logAction(interaction.guild, {
+      type: 'mod',
       title: sub === 'add' ? 'Role Added' : 'Role Removed',
       fields: [
         { name: 'User', value: `${user.tag} (${user.id})` },

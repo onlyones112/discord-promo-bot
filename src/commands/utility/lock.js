@@ -2,10 +2,10 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { logAction } = require('../../utils/logger');
 
 module.exports = {
+  moderationCommand: true,
   data: new SlashCommandBuilder()
     .setName('lock')
     .setDescription('Lock or unlock this channel for @everyone')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
     .addSubcommand((sub) => sub.setName('on').setDescription('Lock this channel'))
     .addSubcommand((sub) => sub.setName('off').setDescription('Unlock this channel')),
 
@@ -22,6 +22,7 @@ module.exports = {
     }
 
     await logAction(interaction.guild, {
+      type: 'mod',
       title: sub === 'on' ? 'Channel Locked' : 'Channel Unlocked',
       fields: [
         { name: 'Channel', value: `${interaction.channel}` },
