@@ -1,4 +1,5 @@
 const { logAction } = require('../utils/logger');
+const { getJoinInfo, adjustStats } = require('../utils/inviteStore');
 
 module.exports = {
   name: 'guildMemberRemove',
@@ -13,5 +14,10 @@ module.exports = {
         { name: 'Member Count', value: `${member.guild.memberCount}` },
       ],
     });
+
+    const joinInfo = getJoinInfo(member.guild.id, member.id);
+    if (joinInfo && joinInfo.inviterId && !joinInfo.fake) {
+      adjustStats(member.guild.id, joinInfo.inviterId, { left: 1 });
+    }
   },
 };
