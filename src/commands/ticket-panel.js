@@ -1,4 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, ChannelType } = require('discord.js');
+const { getConfig, setConfig } = require('../utils/guildConfig');
+
+const MAX_PANELS = 3;
 
 // customId format: ticket_create:<categoryId>:<roleId|none>:<labelSlug>
 // Everything a click needs travels inside the button itself, so we don't
@@ -8,9 +11,11 @@ function slug(text) {
 }
 
 module.exports = {
+  MAX_PANELS,
+
   data: new SlashCommandBuilder()
     .setName('ticket-panel')
-    .setDescription('Post an "open a ticket" panel for a specific category (run once per ticket type)')
+    .setDescription(`Post an "open a ticket" panel for a specific category (up to ${MAX_PANELS} per server)`)
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addChannelOption((opt) =>
       opt.setName('category').setDescription('Category new tickets of this type get created under').addChannelTypes(ChannelType.GuildCategory).setRequired(true),
@@ -21,6 +26,11 @@ module.exports = {
     .addStringOption((opt) => opt.setName('description').setDescription('Panel embed description').setRequired(false)),
 
   async execute(interaction) {
+    const existing = getConfig(interaction.guild.id).ticketPanels || [];
+    if (existing.length >= MAX_PANELS) {
+      return interaction.reply({ content: `You already have ${MAX_PANELS} ticket panels configured (the max). Remove one with \`/ticket-panels remove\` first.`, ephemeral: true });
+    }
+
     const category = interaction.options.getChannel('category');
     const label = interaction.options.getString('label');
     const role = interaction.options.getRole('role');
@@ -38,7 +48,12 @@ module.exports = {
       new ButtonBuilder().setCustomId(customId).setLabel(`Open ${label} Ticket`).setEmoji('🎫').setStyle(ButtonStyle.Primary),
     );
 
-    await interaction.channel.send({ embeds: [embed], components: [row] });
-    await interaction.reply({ content: `Panel posted. Tickets from this button will be created under **${category.name}**.`, ephemeral: true });
+    const msg = await interaction.channel.send({ embeds: [embed], components: [row] });
+
+    setConfig(interaction.guild.id, {
+      ticketPanels: [...existing, { messageId: msg.id, channelId: interaction.channel.id, label, categoryId: category.id, roleId: role ? role.id : null }],
+    });
+
+    await interaction.reply({ content: `Panel posted (${existing.length + 1}/${MAX_PANELS}). Tickets from this button will be created under **${category.name}**.`, ephemeral: true });
   },
 };
