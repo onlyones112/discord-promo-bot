@@ -1,5 +1,6 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { getConfig, setConfig } = require('../utils/guildConfig');
+const { buildPanelEmbed } = require('../utils/panelStyle');
 
 const MAX_USERS = 10;
 
@@ -9,19 +10,21 @@ function getNoPrefixUsers(guildId) {
 
 function panelEmbed(guildId, requestedBy) {
   const users = getNoPrefixUsers(guildId);
-  return new EmbedBuilder()
-    .setColor('#2F80ED')
-    .setTitle('🚫 No-Prefix Users')
-    .setDescription(`These users can type \`help\`, \`ping\`, etc. with **zero prefix** anywhere in this server (max ${MAX_USERS}).`)
-    .addFields({ name: `Users (${users.length}/${MAX_USERS})`, value: users.length ? users.map((id) => `<@${id}>`).join(', ') : 'None yet' })
-    .setFooter({ text: `Requested By | ${requestedBy}` });
+  return buildPanelEmbed({
+    moduleKey: 'noprefix',
+    moduleLabel: 'No-Prefix',
+    tagline: 'These users can bare-type safe commands and config panels with zero prefix.',
+    statusLines: [`users ........... ${users.length}/${MAX_USERS}`],
+    note: users.length ? users.map((id) => `<@${id}>`).join(', ') : undefined,
+    requestedBy,
+  });
 }
 
 function panelRow() {
   return new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('panel_noprefix_add').setLabel('Add User').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId('panel_noprefix_remove').setLabel('Remove User').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('panel_noprefix_close').setLabel('Close').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('panel_noprefix_add').setLabel('Add').setEmoji('➕').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('panel_noprefix_remove').setLabel('Remove').setEmoji('➖').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('panel_noprefix_close').setLabel('Dismiss').setEmoji('✕').setStyle(ButtonStyle.Secondary),
   );
 }
 

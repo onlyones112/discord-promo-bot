@@ -1,21 +1,22 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 const { getAutomod } = require('./automod');
-const { setConfig } = require('../utils/guildConfig');
+const { buildPanelEmbed } = require('../utils/panelStyle');
 
 const FILTERS = [
-  { key: 'invites', label: 'Invites' },
-  { key: 'links', label: 'Links' },
-  { key: 'mentions', label: 'Mention Spam' },
-  { key: 'images', label: 'Images' },
+  { key: 'invites', label: 'Invites', emoji: '🔗' },
+  { key: 'links', label: 'Links', emoji: '🌐' },
+  { key: 'mentions', label: 'Mention Spam', emoji: '📣' },
+  { key: 'images', label: 'Images', emoji: '🖼️' },
 ];
 
 function panelEmbed(settings) {
-  const lines = FILTERS.map((f) => `${settings[f.key] ? '✅' : '❌'} ${f.label}`).join('\n');
-  return new EmbedBuilder()
-    .setColor('#2F80ED')
-    .setTitle('🧠 AutoMod Panel')
-    .setDescription(`${lines}\n\nClick a button below to toggle that filter. Staff with Manage Messages are always exempt.`)
-    .setFooter({ text: 'Only Manage Guild permission holders can use these buttons' });
+  return buildPanelEmbed({
+    moduleKey: 'automod',
+    moduleLabel: 'AutoMod',
+    tagline: 'Word/link/mention filtering. Manage Messages holders are always exempt.',
+    statusLines: FILTERS.map((f) => `${f.label.padEnd(14, '.')} ${settings[f.key] ? 'ON' : 'off'}`),
+    requestedBy: 'the server',
+  });
 }
 
 function panelRow(settings) {
@@ -24,8 +25,9 @@ function panelRow(settings) {
     row.addComponents(
       new ButtonBuilder()
         .setCustomId(`panel_automod_toggle:${f.key}`)
-        .setLabel(`${settings[f.key] ? 'Disable' : 'Enable'} ${f.label}`)
-        .setStyle(settings[f.key] ? ButtonStyle.Danger : ButtonStyle.Success),
+        .setLabel(f.label)
+        .setEmoji(f.emoji)
+        .setStyle(settings[f.key] ? ButtonStyle.Danger : ButtonStyle.Secondary),
     );
   }
   return row;
@@ -35,7 +37,7 @@ module.exports = {
   panelEmbed,
   panelRow,
 
-  data: new SlashCommandBuilder().setName('automod-panel').setDescription('Open an interactive AutoMod control panel').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+  data: new SlashCommandBuilder().setName('automod-panel').setDescription('Open the AutoMod control panel').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {
     const settings = getAutomod(interaction.guild.id);
