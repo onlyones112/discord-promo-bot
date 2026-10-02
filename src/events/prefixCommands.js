@@ -18,36 +18,110 @@ const PREFIX_COMMANDS = {
   },
 };
 
-// Only these are safe to trigger with zero prefix (via /guildnoprefix) —
-// read-only, can't be accidentally destructive if someone just types the word in chat.
+// Only these are safe to trigger with zero prefix by anyone on the /guildnoprefix
+// list — read-only, can't be accidentally destructive if someone just types the word.
 const NO_PREFIX_SAFE_LIST = ['help', 'ping'];
+
+// Typing one of these bare words opens the matching config panel — still gated
+// by the same permission the equivalent slash command requires, AND the
+// person must be on the /guildnoprefix list (except guildnoprefix itself,
+// which has to be reachable without being on that list already).
+const BARE_PANEL_TRIGGERS = {
+  antinuke: {
+    permission: PermissionFlagsBits.Administrator,
+    run: async (message) => {
+      const { getAntinuke } = require('../commands/antinuke');
+      const { panelEmbed, panelRows } = require('../commands/antinuke-panel');
+      const settings = getAntinuke(message.guild.id);
+      await message.reply({ embeds: [panelEmbed(settings, message.author.username)], components: panelRows() });
+    },
+  },
+  automod: {
+    permission: PermissionFlagsBits.ManageGuild,
+    run: async (message) => {
+      const { getAutomod } = require('../commands/automod');
+      const { panelEmbed, panelRow } = require('../commands/automod-panel');
+      const settings = getAutomod(message.guild.id);
+      await message.reply({ embeds: [panelEmbed(settings)], components: [panelRow(settings)] });
+    },
+  },
+  moderation: {
+    permission: PermissionFlagsBits.ManageMessages,
+    run: async (message) => {
+      const { panelEmbed, panelRows } = require('../commands/moderation-panel');
+      await message.reply({ embeds: [panelEmbed(message.guild, message.author.username)], components: panelRows() });
+    },
+  },
+  rolelock: {
+    permission: PermissionFlagsBits.Administrator,
+    run: async (message) => {
+      const { getRoleLock } = require('../commands/rolelock');
+      const { panelEmbed, panelRow } = require('../commands/rolelock-panel');
+      const settings = getRoleLock(message.guild.id);
+      await message.reply({ embeds: [panelEmbed(settings)], components: [panelRow()] });
+    },
+  },
+  modperms: {
+    permission: PermissionFlagsBits.Administrator,
+    run: async (message) => {
+      const { panelEmbed, panelRows } = require('../commands/modperms-panel');
+      await message.reply({ embeds: [panelEmbed(message.guild.id, message.author.username)], components: panelRows() });
+    },
+  },
+  autorole: {
+    permission: PermissionFlagsBits.ManageRoles,
+    run: async (message) => {
+      const { panelEmbed, panelRow } = require('../commands/autorole-panel');
+      await message.reply({ embeds: [panelEmbed(message.guild.id, message.author.username)], components: [panelRow()] });
+    },
+  },
+  ticketsetup: {
+    permission: PermissionFlagsBits.ManageGuild,
+    run: async (message) => {
+      const { panelEmbed, panelRow } = require('../commands/ticket-config-panel');
+      await message.reply({ embeds: [panelEmbed(message.guild.id, message.author.username)], components: [panelRow()] });
+    },
+  },
+};
 
 module.exports = {
   name: 'messageCreate',
   async execute(message) {
     if (!message.guild || message.author.bot) return;
 
-    // Typing the bare word "guildnoprefix" (no slash, no prefix needed) opens
-    // its panel directly — for anyone with Manage Server permission.
-    if (message.content.trim().toLowerCase() === 'guildnoprefix') {
+    const bare = message.content.trim().toLowerCase();
+    const { prefix, noPrefixUsers } = getConfig(message.guild.id);
+
+    // "guildnoprefix" is always bare-triggerable for Manage Server holders —
+    // it has to be, since it's the command that builds the no-prefix list itself.
+    if (bare === 'guildnoprefix') {
       if (!message.member.permissions.has(PermissionFlagsBits.ManageGuild)) return;
       const { panelEmbed, panelRow } = require('../commands/guildnoprefix');
       await message.reply({ embeds: [panelEmbed(message.guild.id, message.author.username)], components: [panelRow()] });
       return;
     }
 
-    const { prefix, noPrefixUsers } = getConfig(message.guild.id);
-
-    // No-prefix mode: only for specific users added via /guildnoprefix, and
-    // only fires on an exact, bare match ("ping" / "help" with nothing else)
-    // so normal conversation isn't affected.
+    // Everything else bare-typed requires being on the /guildnoprefix list.
     if (noPrefixUsers?.includes(message.author.id)) {
-      const bare = message.content.trim().toLowerCase();
       if (NO_PREFIX_SAFE_LIST.includes(bare)) {
         try {
           await PREFIX_COMMANDS[bare](message, [], prefix);
         } catch (err) {
           console.error('No-prefix command failed:', err);
+        }
+        return;
+      }
+
+      const panelTrigger = BARE_PANEL_TRIGGERS[bare];
+      if (panelTrigger) {
+        if (!message.member.permissions.has(panelTrigger.permission)) {
+          await message.reply({ content: "You don't have permission to open that panel." }).then((m) => setTimeout(() => m.delete().catch(() => {}), 6000));
+          return;
+        }
+        try {
+          await panelTrigger.run(message);
+        } catch (err) {
+          console.error('Bare panel trigger failed:', err);
         }
         return;
       }
